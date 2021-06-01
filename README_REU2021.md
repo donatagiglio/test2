@@ -1,5 +1,5 @@
 # click Binder badge to launch notebook on Binder (no need to install environment):
-#[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/donatagiglio/test2/HEAD)
+#
 # Notebook: Investigating upper ocean variability during tropical cyclones and seasonal sea ice formation and melting: Argovis APIs exposed to co-locate oceanic and atmospheric datasets
 # authors: Giovanni Seijo-Ellis, Donata Giglio, Sarah Purkey, Megan Scanderbeg, and Tyler Tucker
 # Last edit: 05/14/2021 9:25 pm MT
