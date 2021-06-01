@@ -4,7 +4,6 @@ dependencies:
   - python=3.8
   - requests
   - cartopy
-  - os
   - pandas
   - pip
   - scipy
