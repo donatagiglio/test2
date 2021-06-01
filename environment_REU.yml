@@ -1,0 +1,12 @@
+name: py_REU2021
+
+dependencies:
+  - python=3.8
+  - requests
+  - cartopy
+  - os
+  - pandas
+  - pip
+  - scipy
+  - pip:
+    - svgpath2mpl
