@@ -14,7 +14,7 @@ Argovis is a web app and database that allows easy access to Argo profile observ
 # after selecting the right kernel). Let me know how it goes!
 #
 # run these commands from the terminal (jupyter and conda need to be installed)
-# conda env create -f environment_REU.yml
+# conda env create -f environment.yml
 # conda activate py_REU2021
 # conda install -c anaconda ipykernel
 # python -m ipykernel install --user --name=py_REU2021
