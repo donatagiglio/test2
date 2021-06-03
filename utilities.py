@@ -63,6 +63,7 @@ def get_TCs_byDate(startDate,endDate):
 def get_track_for_storm(tc_name='maria',tc_year='2017'):
     tc_star = get_TCs_byNameYear(tc_name,tc_year)
     df  = pd.DataFrame(tc_star[0]['traj_data'])
+    df['_id']  = tc_star[0]['_id']
     return df
 
 
@@ -324,7 +325,7 @@ def TC_and_storms_view(startDate,endDate,tag_TC_or_SH_FILT='TC'):
 # **map_TC_and_Argo**
 
 # Co-locate Argo profiles along TC track and map location of profiles and TC track. TC track info is stored in the dataframe 'df' (which is output of get_track_for_storm)
-def map_TC_and_Argo(df, delta_days, dx, dy, presRange):
+def map_TC_and_Argo(df, delta_days, dx, dy, presRange,printing=False,printing_flag=''):
     prof_beforeTC = []
     prof_afterTC  = []
     col='magenta'
@@ -391,6 +392,9 @@ def map_TC_and_Argo(df, delta_days, dx, dy, presRange):
                     prof_afterTC.append([])
     plt.title('Tropical Cyclone track and location of Argo profiles (magenta)',fontsize=20)
     plt.show()
+    if printing:
+        fig.savefig('./Figures/'+printing_flag+'_map.png')
+                
     return prof_beforeTC,prof_afterTC
 
 
@@ -465,99 +469,7 @@ def plot_prof_pairs(prof_beforeTC,prof_afterTC,presRange=[0,100]):
             plt.legend(fontsize=18)
             plt.show()
 
-
-# **The next cells of code below will define new functions and repeat the 
-# plots done above for the TC of interest, now including bgc variables if 
-# available and printing the figures when bgc variables are available. These 
-# functions should be moved to the section of the notebook that contains all 
-# the functions (eventually all the functions should be moved to a .py).**
-
-def plot_prof_pairs_bgc(prof_beforeTC,prof_afterTC,presRange=[0,100],printing=False,printing_flag=''):
-    # this is needed to remove previous versions of the figures (It was commented out for Binder)
-    # os.system('rm '+printing_flag+'_*.png')
-    n = 0
-    for x,y in zip(prof_beforeTC,prof_afterTC):
-        if any(x) and any(y):
-            n = n + 1
-            print('+++++TRY BGC FIRST++++++')
-            print('+++++'+printing_flag+'+++++')
-            
-            flag_saveTS = False
-            # chla
-            fig = plt.figure(figsize=(15,7.5))
-            chla_b = plot_bgc_var(bgc_dict=x,bgc_name='chla',prof_lab='before',prof_col='black')
-            chla_a = plot_bgc_var(bgc_dict=y,bgc_name='chla',prof_lab='after',prof_col='red')
-            
-            if printing and (chla_b+chla_a)==2:
-                fig.savefig('./'+printing_flag+'_bgc_chla'+str(n).zfill(2)+'.png')
-                flag_saveTS = True
-            # doxy
-            fig = plt.figure(figsize=(15,7.5))
-            doxy_b = plot_bgc_var(bgc_dict=x,bgc_name='doxy',prof_lab='before',prof_col='black')
-            doxy_a = plot_bgc_var(bgc_dict=y,bgc_name='doxy',prof_lab='after',prof_col='red')
-            
-            if printing and (doxy_b+doxy_a)==2:
-                fig.savefig('./'+printing_flag+'_bgc_doxy'+str(n).zfill(2)+'.png')
-                flag_saveTS = True
-#           # nitrate
-            fig = plt.figure(figsize=(15,7.5))
-            nitrate_b = plot_bgc_var(bgc_dict=x,bgc_name='nitrate',prof_lab='before',prof_col='black')
-            nitrate_a = plot_bgc_var(bgc_dict=y,bgc_name='nitrate',prof_lab='after',prof_col='red')
-            
-            if printing and (nitrate_b+nitrate_a)==2:
-                fig.savefig('./'+printing_flag+'_bgc_nitrate'+str(n).zfill(2)+'.png')
-                flag_saveTS = True
-            
-            if flag_saveTS:
-                print('-------------')
-                # temperature
-                fig = plt.figure(figsize=(30,7.5))
-                plt.subplot(121)
-                for d in x.keys():
-                    print('Temperature, before (black): ' + d)
-                    plot_prof(dataX=x[d]['temp'],dataY=x[d]['pres'],xlab='Temperature, degC',ylab='Pressure, dbar',xlim=[],ylim=presRange,label='before',col='k')
-                for d in y.keys():
-                    print('Temperature, after (red): ' + d)
-                    plot_prof(dataX=y[d]['temp'],dataY=y[d]['pres'],xlab='Temperature, degC',ylab='Pressure, dbar',xlim=[],ylim=presRange,label='after',col='r')
-                plt.title('Temperature profiles',fontsize=24)
-                plt.legend(fontsize=18)
-                # salinity
-                plt.subplot(122)
-                for d in x.keys():
-                    print('Salinity, before (black): ' + d)
-                    try:
-                        plot_prof(dataX=x[d]['psal'],dataY=x[d]['pres'],xlab='Salinity, psu',ylab='Pressure, dbar',xlim=[],ylim=presRange,label='before',col='k')
-                    except:
-                        pass
-                for d in y.keys():
-                    print('Salinity, after (red): ' + d)
-                    try:
-                        plot_prof(dataX=y[d]['psal'],dataY=y[d]['pres'],xlab='Salinity, psu',ylab='Pressure, dbar',xlim=[],ylim=presRange,label='after',col='r')
-                    except:
-                        pass
-                plt.title('Salinity profiles',fontsize=24)
-                plt.legend(fontsize=18)
-
-                if printing:
-                    fig.savefig('./'+printing_flag+'_TS'+str(n).zfill(2)+'.png')
-            
-#             plt.show()
-    return n
-
-def plot_bgc_var(bgc_dict,bgc_name,prof_lab,prof_col,presRange):
-    plot_status = False
-    for prf in bgc_dict.keys():
-        if 'containsBGC' in bgc_dict[prf].keys():
-            profile = get_profile(prf)
-            df_bgc= parse_1prof_into_df(profile,data_type='bgc')    
-            if bgc_name in df_bgc.keys():
-                print(bgc_name+', '+prof_lab+' ('+prof_col+'): ' + df_bgc['profile_id'])
-                plot_prof(dataX=df_bgc[bgc_name],dataY=df_bgc['pres'],
-                          xlab=bgc_name,ylab='Pressure, dbar',xlim=[],
-                          ylim=presRange,label=prof_lab,col=prof_col)
-                plot_status = True
-    return plot_status
-
+# function to parse bgc profiles
 def parse_1prof_into_df(profileDict,data_type='core'): #'bgc' to retrieve bgc measurements (including T,S,p yet with no selection and including qc flag)
     df = pd.DataFrame()
     if data_type == 'core':
