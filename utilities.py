@@ -297,16 +297,8 @@ def plot_tracks_time_in_col(TCs_Dict,df_ctag='wind',df_title='',tag_TC_or_SH_FIL
 # tag_TC_or_SH_FILT = 'TC' to map TCs only.
 # 
 # This function has the capability to map tracks for Southern Hemisphere storms using tag_TC_or_SH_FILT = 'SH_FILT'. Nevertheless, the database for Southern Hemisphere storms is still in development. See Section 1.9.
-def TC_and_storms_view(startDate,endDate,tag_TC_or_SH_FILT='TC'):
+def TC_and_storms_view(startDate,endDate,tag_TC_or_SH_FILT='TC',create_figure=True):
     TCs_Dict = get_TCs_byDate(startDate,endDate=endDate)
-    fig = plt.figure(figsize=(15,15))
-    ax = plt.axes(projection=ccrs.Mollweide())
-    gl = ax.gridlines(draw_labels=True,color='black')
-    gl.xlabels_top = False
-    gl.ylabels_right = False
-    gl.xformatter = LONGITUDE_FORMATTER
-    gl.yformatter = LATITUDE_FORMATTER
-    ax.stock_img()
     bool_list = [] 
     for x in TCs_Dict:
         if ('SH_FILT' in tag_TC_or_SH_FILT):
@@ -318,14 +310,53 @@ def TC_and_storms_view(startDate,endDate,tag_TC_or_SH_FILT='TC'):
             df_ctag = 'wind'
             bool_list.append(~('SH_FILT' in x['_id']))      
     output_select = list(compress(TCs_Dict, bool_list))
-    plot_tracks_time_in_col(list(compress(TCs_Dict, bool_list)),df_ctag,df_title,tag_TC_or_SH_FILT)
+    if create_figure:
+        fig = plt.figure(figsize=(15,15))
+        ax = plt.axes(projection=ccrs.Mollweide())
+        gl = ax.gridlines(draw_labels=True,color='black')
+        gl.xlabels_top = False
+        gl.ylabels_right = False
+        gl.xformatter = LONGITUDE_FORMATTER
+        gl.yformatter = LATITUDE_FORMATTER
+        ax.stock_img()
+        plot_tracks_time_in_col(list(compress(TCs_Dict, bool_list)),df_ctag,df_title,tag_TC_or_SH_FILT)
     return output_select
 
+# **map_TC**
+
+# Map of the TC track. TC track info is stored in the dataframe 'df' (which is output of get_track_for_storm)
+def map_TC(df,printing=False,printing_flag='',dx_buffer = 5,dy_buffer = 5,font_size=20):
+    fig = plt.figure(figsize=(15,15))
+    ax = plt.axes(projection=ccrs.PlateCarree()) #Mollweide
+    gl = ax.gridlines(draw_labels=True,color='black')
+    gl.xlabels_top = False
+    gl.ylabels_right = False
+    gl.xlabel_style = {'size': font_size}
+    gl.ylabel_style = {'size': font_size}
+    gl.xformatter = LONGITUDE_FORMATTER
+    gl.yformatter = LATITUDE_FORMATTER
+    ax.coastlines()
+    ax.add_feature(cft.LAND)
+    ax.add_feature(cft.OCEAN)
+    im = plt.scatter(df['lon'],df['lat'],transform=ccrs.PlateCarree(),s=2000,marker=hurricane,
+                c=df['wind'], facecolors='none', linewidth=3.5)
+    cb = plt.colorbar(orientation='vertical',fraction=0.03,pad=0.02)
+    cb.ax.tick_params(labelsize=15)
+    cb.set_label('maximum sustained winds, knots', fontsize=16)
+    dti = pd.to_datetime(df['timestamp'])
+    ax.set_extent([min(df['lon'])-dx_buffer, max(df['lon'])+dx_buffer,
+                   min(df['lat'])-dy_buffer, max(df['lat'])+dy_buffer,], crs=ccrs.PlateCarree())
+    
+    if printing:
+        plt.show()
+        fig.savefig('./Figures/'+printing_flag+'_map.png')
+                
+    return fig
 
 # **map_TC_and_Argo**
 
 # Co-locate Argo profiles along TC track and map location of profiles and TC track. TC track info is stored in the dataframe 'df' (which is output of get_track_for_storm)
-def map_TC_and_Argo(df, delta_days, dx, dy, presRange,printing=False,printing_flag=''):
+def map_TC_and_Argo(df, delta_days, dx, dy, presRange,printing=False,printing_flag='',font_size=20):
     prof_beforeTC = []
     prof_afterTC  = []
     col='magenta'
@@ -336,6 +367,8 @@ def map_TC_and_Argo(df, delta_days, dx, dy, presRange,printing=False,printing_fl
     gl = ax.gridlines(draw_labels=True,color='black')
     gl.xlabels_top = False
     gl.ylabels_right = False
+    gl.xlabel_style = {'size': font_size}
+    gl.ylabel_style = {'size': font_size}
     gl.xformatter = LONGITUDE_FORMATTER
     gl.yformatter = LATITUDE_FORMATTER
     ax.coastlines()
@@ -474,9 +507,12 @@ def parse_1prof_into_df(profileDict,data_type='core'): #'bgc' to retrieve bgc me
     df = pd.DataFrame()
     if data_type == 'core':
         profileDf = pd.DataFrame(profileDict['measurements'])
-    if data_type == 'bgc' and 'bgcMeas' in profileDict.keys():
+    if data_type == 'bgc' and 'bgcMeas' in profileDict.keys() and 'containsBGC' in profileDict.keys():
         profileDf = pd.DataFrame(profileDict['bgcMeas'])
         profileDf['containsBGC'] = profileDict['containsBGC']
+    elif data_type == 'bgc':
+        profileDf = pd.DataFrame(profileDict['measurements'])
+        
     profileDf['cycle_number'] = profileDict['cycle_number']
     profileDf['profile_id'] = profileDict['_id']
     profileDf['lat'] = profileDict['lat']
@@ -486,3 +522,25 @@ def parse_1prof_into_df(profileDict,data_type='core'): #'bgc' to retrieve bgc me
     df = pd.concat([df, profileDf], sort=False)
     df.head()
     return df
+
+# function to plot the profiles
+def make_plot(b,a,b_tag,a_tag,x_tag,b_yax,a_yax,y_tag,y_lim,title_plot,font_size=20):
+    b_mask = (b_yax>=min(y_lim)) & (b_yax<=max(y_lim))
+    a_mask = (a_yax>=min(y_lim)) & (a_yax<=max(y_lim))
+    if 'QC' not in x_tag:
+        plt.plot(b[b_mask],b_yax[b_mask],linewidth=3,color='k',marker='*',label=b_tag)
+        plt.plot(a[a_mask],a_yax[a_mask],linewidth=3,color='r',marker='*',label=a_tag)
+    else:
+        plt.plot(b[b_mask],b_yax[b_mask],linewidth=0,color='k',marker='*',label=b_tag)
+        plt.plot(a[a_mask],a_yax[a_mask],linewidth=0,color='r',marker='*',label=a_tag)
+    plt.title(title_plot,fontsize=font_size)
+    plt.gca().set_xlabel(x_tag,fontsize=font_size)
+    plt.gca().set_ylabel(y_tag,fontsize=font_size)
+    plt.ylim(y_lim)
+    plt.gca().invert_yaxis()
+    plt.legend(fontsize=font_size*.8)
+    
+    for tick in plt.gca().xaxis.get_majorticklabels():  # example for xaxis
+        tick.set_fontsize(font_size) 
+    for tick in plt.gca().yaxis.get_majorticklabels():  # example for xaxis
+        tick.set_fontsize(font_size) 
